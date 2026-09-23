@@ -4,6 +4,7 @@
 export type ProjectCategory = "social" | "campaigns" | "corporate" | "events" | "bts";
 export type ProjectStatus = "live" | "draft";
 export type LinkType = "video" | "portfolio";
+export type ProjectSource = "manual" | "form" | "import";
 export type TeamRole = "admin" | "member";
 
 export interface Database {
@@ -31,6 +32,9 @@ export interface Database {
           client: string | null;
           description: string | null;
           status: ProjectStatus;
+          project_date: string | null;
+          source: ProjectSource;
+          external_ref: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -41,6 +45,9 @@ export interface Database {
           client?: string | null;
           description?: string | null;
           status?: ProjectStatus;
+          project_date?: string | null;
+          source?: ProjectSource;
+          external_ref?: string | null;
           created_by?: string | null;
         };
         Update: {
@@ -49,6 +56,9 @@ export interface Database {
           client?: string | null;
           description?: string | null;
           status?: ProjectStatus;
+          project_date?: string | null;
+          source?: ProjectSource;
+          external_ref?: string | null;
         };
         Relationships: [
           {
@@ -68,6 +78,7 @@ export interface Database {
           label: string;
           url: string;
           sort_order: number;
+          source: ProjectSource;
           created_at: string;
         };
         Insert: {
@@ -76,8 +87,15 @@ export interface Database {
           label: string;
           url: string;
           sort_order?: number;
+          source?: ProjectSource;
         };
-        Update: { type?: LinkType; label?: string; url?: string; sort_order?: number };
+        Update: {
+          type?: LinkType;
+          label?: string;
+          url?: string;
+          sort_order?: number;
+          source?: ProjectSource;
+        };
         Relationships: [
           {
             foreignKeyName: "project_links_project_id_fkey";

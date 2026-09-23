@@ -7,6 +7,7 @@ import { CATEGORIES } from "@/types/database";
 import { ProjectDialog } from "@/components/ProjectDialog";
 import { ProjectCard } from "@/components/ProjectCard";
 import { SearchBar } from "@/components/SearchBar";
+import { isAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,8 @@ export default async function DashboardPage({
   const { q } = await searchParams;
   const searching = Boolean(q?.trim());
 
-  const [summary, stats, activity] = await Promise.all([
-    getSummary(), getCategoryStats(), getActivity(),
+  const [summary, stats, activity, admin] = await Promise.all([
+    getSummary(), getCategoryStats(), getActivity(), isAdmin(),
   ]);
 
   const results = searching ? await searchProjects(q!) : [];
@@ -29,14 +30,16 @@ export default async function DashboardPage({
     <main className="px-6 py-6 pb-20">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg font-semibold">Dashboard</h1>
-        <ProjectDialog
-          mode="create"
-          trigger={
-            <button className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">
-              + Add project
-            </button>
-          }
-        />
+        {admin ? (
+          <ProjectDialog
+            mode="create"
+            trigger={
+              <button className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">
+                + Add project
+              </button>
+            }
+          />
+        ) : null}
       </div>
 
       <Suspense fallback={<div className="h-[46px] rounded-md border border-line bg-white" />}>
@@ -54,7 +57,7 @@ export default async function DashboardPage({
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              {results.map((p) => <ProjectCard key={p.id} project={p} />)}
+              {results.map((p) => <ProjectCard key={p.id} project={p} canEdit={admin} />)}
             </div>
           )}
         </section>
@@ -125,10 +128,12 @@ export default async function DashboardPage({
               <div className="grid gap-4">
                 {recent.length === 0 ? (
                   <div className="rounded-md border border-line bg-white py-12 text-center text-sm text-muted">
-                    No projects yet. Use “Add project” to create the first one.
+                    {admin
+                      ? "No projects yet. Use “Add project” to create the first one."
+                      : "No projects yet."}
                   </div>
                 ) : (
-                  recent.map((p) => <ProjectCard key={p.id} project={p} />)
+                  recent.map((p) => <ProjectCard key={p.id} project={p} canEdit={admin} />)
                 )}
               </div>
             </div>

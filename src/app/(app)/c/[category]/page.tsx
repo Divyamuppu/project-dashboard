@@ -4,6 +4,7 @@ import { CATEGORY_MAP, CATEGORIES } from "@/types/database";
 import type { ProjectCategory } from "@/types/database";
 import { ProjectDialog } from "@/components/ProjectDialog";
 import { ProjectCard } from "@/components/ProjectCard";
+import { isAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,11 @@ export default async function CategoryPage({
   const key = category as ProjectCategory;
   const meta = CATEGORY_MAP[key];
 
-  const [projects, stats] = await Promise.all([getProjects(key), getCategoryStats()]);
+  const [projects, stats, admin] = await Promise.all([
+    getProjects(key),
+    getCategoryStats(),
+    isAdmin(),
+  ]);
   const s = stats.find((x) => x.category === key);
 
   return (
@@ -31,15 +36,17 @@ export default async function CategoryPage({
           <span className="h-3 w-3 rounded-sm" style={{ background: meta.hex }} />
           {meta.label}
         </h1>
-        <ProjectDialog
-          mode="create"
-          defaultCategory={key}
-          trigger={
-            <button className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">
-              + Add project to {meta.label}
-            </button>
-          }
-        />
+        {admin && (
+          <ProjectDialog
+            mode="create"
+            defaultCategory={key}
+            trigger={
+              <button className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">
+                + Add project to {meta.label}
+              </button>
+            }
+          />
+        )}
       </div>
 
       <p className="mb-6 text-sm text-muted tnum">
@@ -53,22 +60,24 @@ export default async function CategoryPage({
           <p className="text-sm text-muted">
             No projects in {meta.label} yet.
           </p>
-          <div className="mt-4">
-            <ProjectDialog
-              mode="create"
-              defaultCategory={key}
-              trigger={
-                <button className="rounded-md border border-line bg-white px-4 py-2 text-sm hover:border-accent hover:text-accent">
-                  Add the first one
-                </button>
-              }
-            />
-          </div>
+          {admin && (
+            <div className="mt-4">
+              <ProjectDialog
+                mode="create"
+                defaultCategory={key}
+                trigger={
+                  <button className="rounded-md border border-line bg-white px-4 py-2 text-sm hover:border-accent hover:text-accent">
+                    Add the first one
+                  </button>
+                }
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {projects.map((p) => (
-            <ProjectCard key={p.id} project={p} />
+            <ProjectCard key={p.id} project={p} canEdit={admin} />
           ))}
         </div>
       )}

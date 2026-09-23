@@ -36,6 +36,7 @@ export function ProjectDialog({
     project?.category ?? defaultCategory ?? "social"
   );
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? "draft");
+  const [projectDate, setProjectDate] = useState(project?.project_date ?? "");
   const [videoRows, setVideoRows] = useState<Row[]>(toRows(project?.videoLinks ?? []));
   const [portfolioRows, setPortfolioRows] = useState<Row[]>(toRows(project?.portfolioLinks ?? []));
 
@@ -47,6 +48,7 @@ export function ProjectDialog({
     setName(""); setClient(""); setDescription("");
     setCategory(defaultCategory ?? "social");
     setStatus("draft");
+    setProjectDate("");
     setVideoRows([newRow()]); setPortfolioRows([newRow()]);
     setError("");
   }, [open, mode, defaultCategory]);
@@ -66,7 +68,7 @@ export function ProjectDialog({
     ];
 
     startTransition(async () => {
-      const payload = { category, name, client, description, status, links };
+      const payload = { category, name, client, description, status, projectDate, links };
       const result =
         mode === "create"
           ? await createProject(payload)
@@ -126,6 +128,14 @@ export function ProjectDialog({
                     <option value="draft">Draft</option>
                     <option value="live">Live</option>
                   </select>
+                </Field>
+                <Field label="Project date (optional)">
+                  <input
+                    type="date"
+                    value={projectDate}
+                    onChange={(e) => setProjectDate(e.target.value)}
+                    className={inputCls}
+                  />
                 </Field>
               </div>
 

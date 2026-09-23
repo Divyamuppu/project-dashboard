@@ -1,55 +1,26 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CATEGORY_MAP } from "@/types/database";
+import { CATEGORY_KEYS, MAX_NAME_LENGTH, cleanLinks, parseDate } from "@/lib/links";
+import { requireAdmin } from "@/lib/auth";
 import type { ProjectCategory, ProjectStatus, LinkType } from "@/types/database";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 export type LinkInput = { id?: string; type: LinkType; label: string; url: string };
 
-const CATEGORY_KEYS: ProjectCategory[] = ["social", "campaigns", "corporate", "events", "bts"];
-
-// ── validation ───────────────────────────────────────────────────────────
-function normalizeUrl(raw: string): string | null {
-  const v = raw.trim();
-  if (!v) return null;
-  const withProto = /^https?:\/\//i.test(v) ? v : `https://${v}`;
-  try {
-    const u = new URL(withProto);
-    if (!u.hostname.includes(".")) return null;
-    return u.toString();
-  } catch {
-    return null;
-  }
-}
-
-function cleanLinks(links: LinkInput[]): { ok: true; links: LinkInput[] } | { ok: false; error: string } {
-  const out: LinkInput[] = [];
-  for (const l of links) {
-    if (!l.url?.trim() && !l.label?.trim()) continue; // skip untouched rows
-    const url = normalizeUrl(l.url ?? "");
-    if (!url) return { ok: false, error: `"${l.label || l.url}" isn't a valid URL.` };
-    if (l.type !== "video" && l.type !== "portfolio")
-      return { ok: false, error: "Unknown link type." };
-    const label = (l.label ?? "").trim() || new URL(url).hostname.replace(/^www\./, "");
-    if (label.length > 120) return { ok: false, error: "Link labels must be under 120 characters." };
-    out.push({ id: l.id, type: l.type, label, url });
-  }
-  return { ok: true, links: out };
-}
-
 // Auth is disabled in this build: writes are attributed to no one.
 // Re-add sign-in by restoring the auth check here and in middleware.
 async function currentMemberId(
-  _supabase: Awaited<ReturnType<typeof createClient>>
+  _supabase: ReturnType<typeof createServiceClient>
 ): Promise<string | null> {
   return null;
 }
 
 async function log(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   actorId: string | null,
   projectId: string | null,
   action: string,
@@ -76,14 +47,19 @@ export async function createProject(input: {
   client?: string;
   description?: string;
   status: ProjectStatus;
+  projectDate?: string;
   links: LinkInput[];
 }): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+
   const memberId = await currentMemberId(supabase);
 
   const name = input.name?.trim();
   if (!name) return { ok: false, error: "Project name is required." };
-  if (name.length > 160) return { ok: false, error: "Project name is too long." };
+  if (name.length > MAX_NAME_LENGTH)
+    return { ok: false, error: "Project name is too long." };
   if (!CATEGORY_KEYS.includes(input.category))
     return { ok: false, error: "Pick a valid category." };
 
@@ -98,6 +74,8 @@ export async function createProject(input: {
       client: input.client?.trim() || null,
       description: input.description?.trim() || null,
       status: input.status,
+      project_date: parseDate(input.projectDate),
+      source: "manual",
       created_by: memberId,
     })
     .select("id")
@@ -137,9 +115,13 @@ export async function updateProject(input: {
   client?: string;
   description?: string;
   status: ProjectStatus;
+  projectDate?: string;
   links: LinkInput[];
 }): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+
   const memberId = await currentMemberId(supabase);
 
   const name = input.name?.trim();
@@ -158,6 +140,7 @@ export async function updateProject(input: {
       client: input.client?.trim() || null,
       description: input.description?.trim() || null,
       status: input.status,
+      project_date: parseDate(input.projectDate),
     })
     .eq("id", input.id);
   if (error) return { ok: false, error: error.message };
@@ -203,7 +186,10 @@ export async function updateProject(input: {
 
 // ── DELETE ───────────────────────────────────────────────────────────────
 export async function deleteProject(id: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+
   const memberId = await currentMemberId(supabase);
 
   const { data: project } = await supabase
@@ -227,7 +213,10 @@ export async function setProjectStatus(
   id: string,
   status: ProjectStatus
 ): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+
   const memberId = await currentMemberId(supabase);
 
   const { data, error } = await supabase
@@ -250,7 +239,10 @@ export async function addLink(input: {
   label: string;
   url: string;
 }): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+
   const memberId = await currentMemberId(supabase);
 
   const cleaned = cleanLinks([{ type: input.type, label: input.label, url: input.url }]);
@@ -291,7 +283,10 @@ export async function addLink(input: {
 }
 
 export async function deleteLink(linkId: string): Promise<ActionResult> {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate;
+
   const memberId = await currentMemberId(supabase);
 
   const { data: link } = await supabase

@@ -6,11 +6,13 @@ import type {
   CategoryStats,
   PortfolioSummary,
   ActivityRow,
+  ProjectSource,
 } from "@/types/database";
 
 const PROJECT_SELECT = `
-  id, category, name, client, description, status, created_by, created_at, updated_at,
-  project_links ( id, project_id, type, label, url, sort_order, created_at )
+  id, category, name, client, description, status, project_date, source, external_ref,
+  created_by, created_at, updated_at,
+  project_links ( id, project_id, type, label, url, sort_order, source, created_at )
 `;
 
 type RawProject = {
@@ -20,6 +22,9 @@ type RawProject = {
   client: string | null;
   description: string | null;
   status: "live" | "draft";
+  project_date: string | null;
+  source: ProjectSource;
+  external_ref: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -44,7 +49,9 @@ export async function getProjects(
   let query = supabase.from("projects").select(PROJECT_SELECT);
   if (category) query = query.eq("category", category);
 
-  const { data, error } = await query.order("created_at", { ascending: false });
+  const { data, error } = await query
+    .order("project_date", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false });
   if (error) throw new Error(`Failed to load projects: ${error.message}`);
   return ((data ?? []) as unknown as RawProject[]).map(shape);
 }

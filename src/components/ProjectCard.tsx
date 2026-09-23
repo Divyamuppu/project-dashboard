@@ -6,7 +6,13 @@ import { CATEGORY_MAP } from "@/types/database";
 import type { LinkType, ProjectLink, ProjectWithLinks } from "@/types/database";
 import { ProjectDialog } from "./ProjectDialog";
 
-export function ProjectCard({ project }: { project: ProjectWithLinks }) {
+export function ProjectCard({
+  project,
+  canEdit = false,
+}: {
+  project: ProjectWithLinks;
+  canEdit?: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [adding, setAdding] = useState<LinkType | null>(null);
@@ -37,6 +43,24 @@ export function ProjectCard({ project }: { project: ProjectWithLinks }) {
               {project.status === "live" ? "Live" : "Draft"}
             </span>
             {project.client && <span>· {project.client}</span>}
+            {project.project_date && (
+              <span className="tnum">
+                ·{" "}
+                {new Date(project.project_date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </span>
+            )}
+            {project.source === "form" && (
+              <span
+                className="rounded-full border border-line px-2 py-0.5 text-muted"
+                title="Added automatically from the Google Form"
+              >
+                Form
+              </span>
+            )}
           </div>
           {project.description && (
             <p className="mt-2 text-sm text-muted">{project.description}</p>
@@ -51,6 +75,7 @@ export function ProjectCard({ project }: { project: ProjectWithLinks }) {
           emptyText="No video links yet"
           onDelete={(id) => run(() => deleteLink(id))}
           pending={pending}
+          canEdit={canEdit}
         />
         <LinkSection
           title="Portfolio links"
@@ -58,9 +83,10 @@ export function ProjectCard({ project }: { project: ProjectWithLinks }) {
           emptyText="No portfolio links yet"
           onDelete={(id) => run(() => deleteLink(id))}
           pending={pending}
+          canEdit={canEdit}
         />
 
-        {adding && (
+        {canEdit && adding && (
           <QuickAdd
             type={adding}
             pending={pending}
@@ -78,6 +104,7 @@ export function ProjectCard({ project }: { project: ProjectWithLinks }) {
         {error && <p className="text-sm text-danger">{error}</p>}
       </div>
 
+      {canEdit && (
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2.5">
         <button onClick={() => setAdding("video")} className={btnCls} disabled={pending}>
           + Video link
@@ -111,6 +138,7 @@ export function ProjectCard({ project }: { project: ProjectWithLinks }) {
           Delete
         </button>
       </div>
+      )}
     </div>
   );
 }
@@ -124,12 +152,14 @@ function LinkSection({
   emptyText,
   onDelete,
   pending,
+  canEdit,
 }: {
   title: string;
   links: ProjectLink[];
   emptyText: string;
   onDelete: (id: string) => void;
   pending: boolean;
+  canEdit: boolean;
 }) {
   return (
     <div>
@@ -151,17 +181,19 @@ function LinkSection({
               >
                 {l.label}
               </a>
-              <button
-                onClick={() => {
-                  if (!confirm(`Remove "${l.label}"?`)) return;
-                  onDelete(l.id);
-                }}
-                disabled={pending}
-                className="ml-auto shrink-0 text-muted opacity-0 transition group-hover:opacity-100 hover:text-danger focus:opacity-100"
-                aria-label={`Remove ${l.label}`}
-              >
-                ✕
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => {
+                    if (!confirm(`Remove "${l.label}"?`)) return;
+                    onDelete(l.id);
+                  }}
+                  disabled={pending}
+                  className="ml-auto shrink-0 text-muted opacity-0 transition group-hover:opacity-100 hover:text-danger focus:opacity-100"
+                  aria-label={`Remove ${l.label}`}
+                >
+                  ✕
+                </button>
+              )}
             </li>
           ))}
         </ul>
