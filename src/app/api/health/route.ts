@@ -21,8 +21,13 @@ export const dynamic = "force-dynamic";
  * it finds, so a driver error that quotes the DSN cannot leak it.
  */
 
-/** Removes `user:password@` from any URL-looking substring. */
-export function scrub(text: string): string {
+/**
+ * Removes `user:password@` from any URL-looking substring.
+ *
+ * Not exported: Next.js permits only its own named exports from a route file
+ * (GET, POST, runtime, dynamic …) and fails the build on anything else.
+ */
+function scrub(text: string): string {
   return text
     // postgres://user:pass@host → postgres://***@host
     .replace(/([a-z+]+:\/\/)[^@\s/]*@/gi, "$1***@")
